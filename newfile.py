@@ -460,7 +460,7 @@ def handle_file_upload():
 
                     st.session_state.is_processing = False
                     save_and_rerun()
-                    else:
+            else:
                 st.toast("Only text-based files and image files like .py, .txt, .json, .js, .jpg, .jpeg, .png, .pdf, .docx etc. are allowed.", icon="❌")
 
 def reset_current_conversation():
@@ -646,33 +646,6 @@ def create_new_conversation():
     st.session_state.current_conversation = new_chat_name
     save_and_rerun()
 
-def categorize_conversations(conversations):
-    categorized = {
-        "Today": {},
-        "Yesterday": {},
-        "Past 7 Days": {},
-        "Older": {}
-    }
-
-    now = datetime.datetime.now()
-    today = now.date()
-    yesterday = today - datetime.timedelta(days=1)
-    last_week = today - datetime.timedelta(days=7)
-
-    for convo, messages in conversations.items():
-        if messages:
-            timestamp = datetime.datetime.fromisoformat(messages[0].get("timestamp", now.isoformat()))
-            if timestamp.date() == today:
-                categorized["Today"][convo] = messages
-            elif timestamp.date() == yesterday:
-                categorized["Yesterday"][convo] = messages
-            elif last_week < timestamp.date() < yesterday:
-                categorized["Past 7 Days"][convo] = messages
-            else:
-                categorized["Older"][convo] = messages
-
-    return categorized
-
 def main_ui():
     if st.session_state.username is None:
         tab1, tab2 = st.tabs(["Login", "Signup"])
@@ -702,8 +675,6 @@ def main_ui():
                 st.session_state.current_conversation = None
                 current_conversation = None
 
-        categorized_conversations = categorize_conversations(st.session_state.conversations)
-
         # Sidebar
         with st.sidebar:
             st.header(f"Welcome to Lumiere, {st.session_state.username}.")
@@ -718,22 +689,20 @@ def main_ui():
             create_button = st.button("➕", on_click=create_new_conversation)
 
             with st.expander("History"):
-                for category, convos in categorized_conversations.items():
-                    st.write(f"**{category}**")
-                    for convo in sorted(convos.keys(), reverse=True):
-                        col1, col2 = st.columns([8, 2])
-                        with col1:
-                            if st.button(convo):
-                                st.session_state.current_conversation = convo
-                                save_and_rerun()
-                        with col2:
-                            if convo != "New Chat" and st.button("🗑️", key=f"delete_{convo}"):
-                                del st.session_state.conversations[convo]
-                                if st.session_state.current_conversation == convo:
-                                    st.session_state.current_conversation = None
-                                    if not st.session_state.conversations:
-                                        create_new_conversation()
-                                save_and_rerun()
+                for convo in list(st.session_state.conversations.keys()):
+                    col1, col2 = st.columns([8, 2])
+                    with col1:
+                        if st.button(convo):
+                            st.session_state.current_conversation = convo
+                            save_and_rerun()
+                    with col2:
+                        if convo != "New Chat" and st.button("🗑️", key=f"delete_{convo}"):
+                            del st.session_state.conversations[convo]
+                            if st.session_state.current_conversation == convo:
+                                st.session_state.current_conversation = None
+                                if not st.session_state.conversations:
+                                    create_new_conversation()
+                            save_and_rerun()
 
             with st.expander("Settings"):
                 websearch = st.checkbox("Web Search", value=True)
@@ -754,7 +723,6 @@ def main_ui():
                 encoding = tiktoken.encoding_for_model(selected_model)
 
             st.button("Logout", on_click=logout)
-
         if current_conversation:
             st.title(f"{current_conversation or 'No Chat Selected'}")
             display_chat(current_conversation)
@@ -776,7 +744,7 @@ def main_ui():
                         current_conversation = title
                         st.session_state.current_conversation = title
 
-                    st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input, "timestamp": datetime.datetime.now().isoformat()})
+                    st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input})
                     st.session_state.all_conversations[st.session_state.username] = st.session_state.conversations
                     save_and_rerun()
 
@@ -799,7 +767,7 @@ def main_ui():
                     queries = generated_query.strip().split('\n')
                     site = st.session_state.get("site_input", "").strip()
                     if site:
-                        queries are: [f"site:{site} {query}" for query in queries]
+                        queries = [f"site:{site} {query}" for query in queries]
                     for query in queries:
                         clean_query = query.replace(f"site:{site} ", "").strip()
                         st.write(f"Searching 🌐 for {clean_query}")
@@ -813,9 +781,7 @@ def main_ui():
                         response_text = chunk.replace(typing_indicator, "")  # Temporary display without indicator
                         response_placeholder.markdown(response_text + typing_indicator, unsafe_allow_html=True)
 
-                    response_placeholder.markdown(response_text + typing_indicator, unsafe_allow_html=True)
-
-                response_placeholder.markdown(response_text, unsafe_allow_html=True)
+                    response_placeholder.markdown(response_text, unsafe_allow_html=True)
 
                 st.session_state.is_processing = False
                 st.session_state.all_conversations[st.session_state.username] = st.session_state.conversations

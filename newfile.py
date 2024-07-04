@@ -593,11 +593,16 @@ async def scrape_and_process_results(queries, max_results_per_query):
             scraped_data = await scrape_urls(urls[:max_results_per_query])
             results_json = []
             for idx, url in enumerate(urls[:max_results_per_query], start=1):
-                results_json.append({
-                    "index": idx + query_idx * max_results_per_query,
-                    "url": url,
-                    "content": scraped_data[idx]
-                })
+                # Check if scraped_data has enough elements
+                if idx - 1 < len(scraped_data):
+                    results_json.append({
+                        "index": idx + query_idx * max_results_per_query,
+                        "url": url,
+                        "content": scraped_data[idx - 1]
+                    })
+                else:
+                    print(f"Warning: Not enough scraped data for URL {url}")
+
             all_results_json.extend(results_json)  # Use extend to combine lists
     return json.dumps(all_results_json)
 

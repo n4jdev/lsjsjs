@@ -718,22 +718,24 @@ def main_ui():
             create_button = st.button("➕", on_click=create_new_conversation)
 
             with st.expander("History"):
-                for category, convos in categorized_conversations.items():
-                    st.write(f"**{category}**")
-                    for convo in sorted(convos.keys(), reverse=True):
-                        col1, col2 = st.columns([8, 2])
-                        with col1:
-                            if st.button(convo):
-                                st.session_state.current_conversation = convo
-                                save_and_rerun()
-                        with col2:
-                            if convo != "New Chat" and st.button("🗑️", key=f"delete_{convo}"):
-                                del st.session_state.conversations[convo]
-                                if st.session_state.current_conversation == convo:
-                                    st.session_state.current_conversation = None
-                                    if not st.session_state.conversations:
-                                        create_new_conversation()
-                                save_and_rerun()
+    categorized_conversations = categorize_conversations(st.session_state.conversations)
+
+    for category, convos in categorized_conversations.items():
+        st.write(f"**{category}**")
+        for convo in sorted(convos.keys(), reverse=True):
+            col1, col2 = st.columns([8, 2])
+            with col1:
+                if st.button(convo):
+                    st.session_state.current_conversation = convo
+                    save_and_rerun()
+            with col2:
+                if convo != "New Chat" and st.button("🗑️", key=f"delete_{convo}"):
+                    del st.session_state.conversations[convo]
+                    if st.session_state.current_conversation == convo:
+                        st.session_state.current_conversation = None
+                        if not st.session_state.conversations:
+                            create_new_conversation()
+                    save_and_rerun()
 
             with st.expander("Settings"):
                 websearch = st.checkbox("Web Search", value=True)

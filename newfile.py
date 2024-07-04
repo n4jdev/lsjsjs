@@ -82,7 +82,7 @@ st.set_page_config(
 custom_css = """
     <style>
     a {
-        color: white !important;
+        color: grey !important;
     }
     </style>
     """

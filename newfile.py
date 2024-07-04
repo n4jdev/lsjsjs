@@ -128,7 +128,7 @@ Write an accurate answer concisely for a given question in English, always alway
 Use markdown to format paragraphs, lists, tables, and quotes whenever possible. 
 Use markdown code blocks to write code, including the language for syntax highlighting.
 Use LaTeX to wrap ALL math expressions. Always use double dollar signs $$, for example $$E=mc^2$$.
-DO NOT include any URL's, only include hyperlinked citations with superscript numbers, e.g. [¹](https://example.com/source1)[²](https://example.com/source2)).
+DO NOT include any URL's, only include hyperlinked citations with superscript numbers, e.g. [¹](https://example.com/source1)
 DO NOT include references (URL's at the end, sources).
 Use hyperlinked footnote citations at the end of applicable sentences (e.g, [¹](https://example.com/source1)[²](https://example.com/source2)).
 Write more than 100 words (2 paragraphs).
@@ -460,7 +460,7 @@ def handle_file_upload():
 
                     st.session_state.is_processing = False
                     save_and_rerun()
-            else:
+                    else:
                 st.toast("Only text-based files and image files like .py, .txt, .json, .js, .jpg, .jpeg, .png, .pdf, .docx etc. are allowed.", icon="❌")
 
 def reset_current_conversation():
@@ -646,27 +646,32 @@ def create_new_conversation():
     st.session_state.current_conversation = new_chat_name
     save_and_rerun()
 
-def category_header(category):
-    st.markdown(f"### {category}")
-
 def categorize_conversations(conversations):
-    today, yesterday, past_week, older = [], [], [], []
+    categorized = {
+        "Today": {},
+        "Yesterday": {},
+        "Past 7 Days": {},
+        "Older": {}
+    }
+
     now = datetime.datetime.now()
+    today = now.date()
+    yesterday = today - datetime.timedelta(days=1)
+    last_week = today - datetime.timedelta(days=7)
 
-    for convo_name in conversations.keys():
-        convo_time = datetime.datetime.strptime(convo_name.split(" - ")[-1], "%a, %d %b %Y, %H:%M:%S UTC")
-        delta = now - convo_time
+    for convo, messages in conversations.items():
+        if messages:
+            timestamp = datetime.datetime.fromisoformat(messages[0].get("timestamp", now.isoformat()))
+            if timestamp.date() == today:
+                categorized["Today"][convo] = messages
+            elif timestamp.date() == yesterday:
+                categorized["Yesterday"][convo] = messages
+            elif last_week < timestamp.date() < yesterday:
+                categorized["Past 7 Days"][convo] = messages
+            else:
+                categorized["Older"][convo] = messages
 
-        if delta.days == 0:
-            today.append(convo_name)
-        elif delta.days == 1:
-            yesterday.append(convo_name)
-        elif delta.days <= 7:
-            past_week.append(convo_name)
-        else:
-            older.append(convo_name)
-
-    return today, yesterday, past_week, older
+    return categorized
 
 def main_ui():
     if st.session_state.username is None:
@@ -697,6 +702,8 @@ def main_ui():
                 st.session_state.current_conversation = None
                 current_conversation = None
 
+        categorized_conversations = categorize_conversations(st.session_state.conversations)
+
         # Sidebar
         with st.sidebar:
             st.header(f"Welcome to Lumiere, {st.session_state.username}.")
@@ -711,69 +718,16 @@ def main_ui():
             create_button = st.button("➕", on_click=create_new_conversation)
 
             with st.expander("History"):
-                today, yesterday, past_week, older = categorize_conversations(st.session_state.conversations)
-
-                if today:
-                    category_header("Today")
-                    for convo in today:
+                for category, convos in categorized_conversations.items():
+                    st.write(f"**{category}**")
+                    for convo in sorted(convos.keys(), reverse=True):
                         col1, col2 = st.columns([8, 2])
                         with col1:
                             if st.button(convo):
                                 st.session_state.current_conversation = convo
                                 save_and_rerun()
                         with col2:
-                            if st.button("🗑️", key=f"delete_{convo}"):
-                                del st.session_state.conversations[convo]
-                                if st.session_state.current_conversation == convo:
-                                    st.session_state.current_conversation = None
-                                    if not st.session_state.conversations:
-                                        create_new_conversation()
-                                save_and_rerun()
-
-                if yesterday:
-                    category_header("Yesterday")
-                    for convo in yesterday:
-                        col1, col2 = st.columns([8, 2])
-                        with col1:
-                            if st.button(convo):
-                                st.session_state.current_conversation = convo
-                                save_and_rerun()
-                        with col2:
-                            if st.button("🗑️", key=f"delete_{convo}"):
-                                del st.session_state.conversations[convo]
-                                if st.session_state.current_conversation == convo:
-                                    st.session_state.current_conversation = None
-                                    if not st.session_state.conversations:
-                                        create_new_conversation()
-                                save_and_rerun()
-
-                if past_week:
-                    category_header("Past 7 Days")
-                    for convo in past_week:
-                        col1, col2 = st.columns([8, 2])
-                        with col1:
-                            if st.button(convo):
-                                st.session_state.current_conversation = convo
-                                save_and_rerun()
-                        with col2:
-                            if st.button("🗑️", key=f"delete_{convo}"):
-                                del st.session_state.conversations[convo]
-                                if st.session_state.current_conversation == convo:
-                                    st.session_state.current_conversation = None
-                                    if not st.session_state.conversations:
-                                        create_new_conversation()
-                                save_and_rerun()
-
-                if older:
-                    category_header("Older")
-                    for convo in older:
-                        col1, col2 = st.columns([8, 2])
-                        with col1:
-                            if st.button(convo):
-                                st.session_state.current_conversation = convo
-                                save_and_rerun()
-                        with col2:
-                            if st.button("🗑️", key=f"delete_{convo}"):
+                            if convo != "New Chat" and st.button("🗑️", key=f"delete_{convo}"):
                                 del st.session_state.conversations[convo]
                                 if st.session_state.current_conversation == convo:
                                     st.session_state.current_conversation = None
@@ -800,6 +754,7 @@ def main_ui():
                 encoding = tiktoken.encoding_for_model(selected_model)
 
             st.button("Logout", on_click=logout)
+
         if current_conversation:
             st.title(f"{current_conversation or 'No Chat Selected'}")
             display_chat(current_conversation)
@@ -821,8 +776,7 @@ def main_ui():
                         current_conversation = title
                         st.session_state.current_conversation = title
 
-                    st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input})
-                    st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input})
+                    st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input, "timestamp": datetime.datetime.now().isoformat()})
                     st.session_state.all_conversations[st.session_state.username] = st.session_state.conversations
                     save_and_rerun()
 
@@ -845,7 +799,7 @@ def main_ui():
                     queries = generated_query.strip().split('\n')
                     site = st.session_state.get("site_input", "").strip()
                     if site:
-                        queries = [f"site:{site} {query}" for query in queries]
+                        queries are: [f"site:{site} {query}" for query in queries]
                     for query in queries:
                         clean_query = query.replace(f"site:{site} ", "").strip()
                         st.write(f"Searching 🌐 for {clean_query}")
@@ -859,7 +813,9 @@ def main_ui():
                         response_text = chunk.replace(typing_indicator, "")  # Temporary display without indicator
                         response_placeholder.markdown(response_text + typing_indicator, unsafe_allow_html=True)
 
-                    response_placeholder.markdown(response_text, unsafe_allow_html=True)
+                    response_placeholder.markdown(response_text + typing_indicator, unsafe_allow_html=True)
+
+                response_placeholder.markdown(response_text, unsafe_allow_html=True)
 
                 st.session_state.is_processing = False
                 st.session_state.all_conversations[st.session_state.username] = st.session_state.conversations

@@ -128,7 +128,7 @@ Write an accurate answer concisely for a given question in English, always alway
 Use markdown to format paragraphs, lists, tables, and quotes whenever possible. 
 Use markdown code blocks to write code, including the language for syntax highlighting.
 Use LaTeX to wrap ALL math expressions. Always use double dollar signs $$, for example $$E=mc^2$$.
-DO NOT include any URL's, only include hyperlinked citations with superscript numbers, e.g. [¹](https://example.com/source1)
+DO NOT include any URL's, only include hyperlinked citations with superscript numbers, e.g. [¹](https://example.com/source1)[²](https://example.com/source2)).
 DO NOT include references (URL's at the end, sources).
 Use hyperlinked footnote citations at the end of applicable sentences (e.g, [¹](https://example.com/source1)[²](https://example.com/source2)).
 Write more than 100 words (2 paragraphs).
@@ -646,6 +646,28 @@ def create_new_conversation():
     st.session_state.current_conversation = new_chat_name
     save_and_rerun()
 
+def category_header(category):
+    st.markdown(f"### {category}")
+
+def categorize_conversations(conversations):
+    today, yesterday, past_week, older = [], [], [], []
+    now = datetime.datetime.now()
+
+    for convo_name in conversations.keys():
+        convo_time = datetime.datetime.strptime(convo_name.split(" - ")[-1], "%a, %d %b %Y, %H:%M:%S UTC")
+        delta = now - convo_time
+
+        if delta.days == 0:
+            today.append(convo_name)
+        elif delta.days == 1:
+            yesterday.append(convo_name)
+        elif delta.days <= 7:
+            past_week.append(convo_name)
+        else:
+            older.append(convo_name)
+
+    return today, yesterday, past_week, older
+
 def main_ui():
     if st.session_state.username is None:
         tab1, tab2 = st.tabs(["Login", "Signup"])
@@ -689,20 +711,75 @@ def main_ui():
             create_button = st.button("➕", on_click=create_new_conversation)
 
             with st.expander("History"):
-                for convo in list(st.session_state.conversations.keys()):
-                    col1, col2 = st.columns([8, 2])
-                    with col1:
-                        if st.button(convo):
-                            st.session_state.current_conversation = convo
-                            save_and_rerun()
-                    with col2:
-                        if convo != "New Chat" and st.button("🗑️", key=f"delete_{convo}"):
-                            del st.session_state.conversations[convo]
-                            if st.session_state.current_conversation == convo:
-                                st.session_state.current_conversation = None
-                                if not st.session_state.conversations:
-                                    create_new_conversation()
-                            save_and_rerun()
+                today, yesterday, past_week, older = categorize_conversations(st.session_state.conversations)
+
+                if today:
+                    category_header("Today")
+                    for convo in today:
+                        col1, col2 = st.columns([8, 2])
+                        with col1:
+                            if st.button(convo):
+                                st.session_state.current_conversation = convo
+                                save_and_rerun()
+                        with col2:
+                            if st.button("🗑️", key=f"delete_{convo}"):
+                                del st.session_state.conversations[convo]
+                                if st.session_state.current_conversation == convo:
+                                    st.session_state.current_conversation = None
+                                    if not st.session_state.conversations:
+                                        create_new_conversation()
+                                save_and_rerun()
+
+                if yesterday:
+                    category_header("Yesterday")
+                    for convo in yesterday:
+                        col1, col2 = st.columns([8, 2])
+                        with col1:
+                            if st.button(convo):
+                                st.session_state.current_conversation = convo
+                                save_and_rerun()
+                        with col2:
+                            if st.button("🗑️", key=f"delete_{convo}"):
+                                del st.session_state.conversations[convo]
+                                if st.session_state.current_conversation == convo:
+                                    st.session_state.current_conversation = None
+                                    if not st.session_state.conversations:
+                                        create_new_conversation()
+                                save_and_rerun()
+
+                if past_week:
+                    category_header("Past 7 Days")
+                    for convo in past_week:
+                        col1, col2 = st.columns([8, 2])
+                        with col1:
+                            if st.button(convo):
+                                st.session_state.current_conversation = convo
+                                save_and_rerun()
+                        with col2:
+                            if st.button("🗑️", key=f"delete_{convo}"):
+                                del st.session_state.conversations[convo]
+                                if st.session_state.current_conversation == convo:
+                                    st.session_state.current_conversation = None
+                                    if not st.session_state.conversations:
+                                        create_new_conversation()
+                                save_and_rerun()
+
+                if older:
+                    category_header("Older")
+                    for convo in older:
+                        col1, col2 = st.columns([8, 2])
+                        with col1:
+                            if st.button(convo):
+                                st.session_state.current_conversation = convo
+                                save_and_rerun()
+                        with col2:
+                            if st.button("🗑️", key=f"delete_{convo}"):
+                                del st.session_state.conversations[convo]
+                                if st.session_state.current_conversation == convo:
+                                    st.session_state.current_conversation = None
+                                    if not st.session_state.conversations:
+                                        create_new_conversation()
+                                save_and_rerun()
 
             with st.expander("Settings"):
                 websearch = st.checkbox("Web Search", value=True)
@@ -744,6 +821,7 @@ def main_ui():
                         current_conversation = title
                         st.session_state.current_conversation = title
 
+                    st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input})
                     st.session_state.conversations[current_conversation].append({"role": "user", "content": user_input})
                     st.session_state.all_conversations[st.session_state.username] = st.session_state.conversations
                     save_and_rerun()

@@ -78,6 +78,16 @@ st.set_page_config(
     layout="wide",
 )
 
+# Inject custom CSS to recolor links
+custom_css = """
+    <style>
+    a {
+        color: white !important;
+    }
+    </style>
+    """
+st.markdown(custom_css, unsafe_allow_html=True)
+
 # Hide main menu and footer
 hide_streamlit_style = """
     <style>

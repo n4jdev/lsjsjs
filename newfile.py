@@ -104,7 +104,8 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 class Chatbot:
     def __init__(self):
-        self.api_url = "https://omniplex.ai/api/chat"
+        self.omniplex_api_url = "https://omniplex.ai/api/chat"
+        self.ffa_api_url = "https://ffa.chat/api/chat/completions"
         self.model = "gpt-4o"
         self.temperature = 1
         self.max_tokens = 4096
@@ -112,20 +113,20 @@ class Chatbot:
         self.system_prompt = "You are a helpful AI assistant."
 
     def send_message(self, chat_history, message, websearch=True):
-    if websearch:
-        generated_query = generate_search_query(message, chat_history)
-        if generated_query != "CANCEL_WEBSEARCH":
-            queries = generated_query.strip().split('\n')
-            site = st.session_state.get("site_input", "").strip()
-            if site:
-                queries = [f"site:{site} {query}" for query in queries]
+        if websearch:
+            generated_query = self.generate_search_query(message, chat_history)
+            if generated_query != "CANCEL_WEBSEARCH":
+                queries = generated_query.strip().split('\n')
+                site = st.session_state.get("site_input", "").strip()
+                if site:
+                    queries = [f"site:{site} {query}" for query in queries]
 
-            scraped_results_json = asyncio.run(scrape_and_process_results(queries, 3))  # Scrape top 3 results for each query
+                scraped_results_json = asyncio.run(self.scrape_and_process_results(queries, 3))  # Scrape top 3 results for each query
 
-            current_time = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y, %H:%M:%S UTC")
-            user_name = st.session_state.username
+                current_time = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y, %H:%M:%S UTC")
+                user_name = st.session_state.username
 
-            message = f"""{message}
+                message = f"""{message}
 
 Write an accurate answer concisely for a given question in English, always always citing the search results. Your answer must be correct, high-quality, and written by an expert using an unbiased and journalistic tone. Always cite search results for your responses using hyperlinked superscript numbers of the index at the end of sentences when needed, for example "Ice is less dense than water.[¹](https://example.com/source1)" NO SPACE between the last word and the citation. Cite the most relevant results that answer the question. Avoid citing irrelevant results. Write only the response. Use markdown for formatting.
 
@@ -142,76 +143,76 @@ ONLY cite sources from search results below. DO NOT add any other links other th
 {scraped_results_json}
 """
 
-    if self.model in ["claude-3-5-sonnet-20240620", "gemini-1.5-pro", "DeepSeek-Coder-V2", "deepseek-V2-chat"]:
-        url = "https://ffa.chat/api/chat/completions"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
-            'Content-Type': 'application/json',
-            'authority': 'ffa.chat',
-            'accept-language': 'en-PH,en-US;q=0.9,en;q=0.8',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImVlN2JlMjg2LWQyNWEtNGI5Yy1hZTlhLTVjNTVjNzZiNTcwYSJ9.-vWeEQiW1m2E1K8SyDqgxeBfjomLuUfFX8Hz2bnJrq0',
-            'origin': 'https://ffa.chat',
-            'referer': 'https://ffa.chat/',
-            'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124"',
-            'sec-ch-ua-mobile': '?1',
-            'sec-ch-ua-platform': '"Android"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-        }
-        payload = {
-            "model": self.model,
-            "stream": True,
-            "messages": chat_history + [{"role": "user", "content": message}],
-            "chat_id": str(uuid.uuid4())  # Generate a unique chat ID
-        }
-    else:
-        # Existing Omniplex API code for GPT models
-        url = self.api_url
-        headers = {'Content-Type': 'application/json'}
-        payload = {
-            "messages": [{"role": "system", "content": self.system_prompt}] + chat_history + [{"role": "user", "content": message}],
-            "model": self.model,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "top_p": self.top_p,
-            "frequency_penalty": 0,
-            "presence_penalty": 0,
-            "stream": True
-        }
+        if self.model in ["claude-3-5-sonnet-20240620", "gemini-1.5-pro", "DeepSeek-Coder-V2", "deepseek-V2-chat"]:
+            url = self.ffa_api_url
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+                'Content-Type': 'application/json',
+                'authority': 'ffa.chat',
+                'accept-language': 'en-PH,en-US;q=0.9,en;q=0.8',
+                'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImVlN2JlMjg2LWQyNWEtNGI5Yy1hZTlhLTVjNTVjNzZiNTcwYSJ9.-vWeEQiW1m2E1K8SyDqgxeBfjomLuUfFX8Hz2bnJrq0',
+                'origin': 'https://ffa.chat',
+                'referer': 'https://ffa.chat/',
+                'sec-ch-ua': '"Not-A.Brand";v="99", "Chromium";v="124"',
+                'sec-ch-ua-mobile': '?1',
+                'sec-ch-ua-platform': '"Android"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+            }
+            payload = {
+                "model": self.model,
+                "stream": True,
+                "messages": chat_history + [{"role": "user", "content": message}],
+                "chat_id": str(uuid.uuid4())  # Generate a unique chat ID
+            }
+        else:
+            # Existing Omniplex API code for GPT models
+            url = self.omniplex_api_url
+            headers = {'Content-Type': 'application/json'}
+            payload = {
+                "messages": [{"role": "system", "content": self.system_prompt}] + chat_history + [{"role": "user", "content": message}],
+                "model": self.model,
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+                "top_p": self.top_p,
+                "frequency_penalty": 0,
+                "presence_penalty": 0,
+                "stream": True
+            }
 
-    response_text = ""
-    typing_indicator = " |"
-    with st.spinner(""):
-        try:
-            response = requests.post(url, headers=headers, json=payload, stream=True)
-            response.raise_for_status()  # Raise an exception for bad status codes
-            
-            for chunk in response.iter_lines():
-                if chunk:
-                    if self.model in ["claude-3-5-sonnet-20240620", "gemini-1.5-pro", "DeepSeek-Coder-V2", "deepseek-V2-chat"]:
-                        # Parse the JSON-like string
-                        chunk_str = chunk.decode('utf-8').replace('data: ', '')
-                        if chunk_str != "[DONE]":
-                            try:
-                                chunk_data = json.loads(chunk_str)
-                                if 'choices' in chunk_data and len(chunk_data['choices']) > 0:
-                                    delta = chunk_data['choices'][0]['delta']
-                                    if 'content' in delta:
-                                        response_text += delta['content']
-                                        yield response_text + typing_indicator
-                            except json.JSONDecodeError:
-                                print(f"Failed to parse chunk: {chunk_str}")
-                    else:
-                        # Existing Omniplex API response handling
-                        chunk_str = chunk.decode("utf-8")
-                        response_text += chunk_str
-                        yield response_text + typing_indicator
-            
-            chat_history.append({"role": "assistant", "content": response_text})
-            return chat_history
-        except requests.exceptions.RequestException as e:
-            yield f"Error: {str(e)}"
+        response_text = ""
+        typing_indicator = " |"
+        with st.spinner(""):
+            try:
+                response = requests.post(url, headers=headers, json=payload, stream=True)
+                response.raise_for_status()  # Raise an exception for bad status codes
+                
+                for chunk in response.iter_lines():
+                    if chunk:
+                        if self.model in ["claude-3-5-sonnet-20240620", "gemini-1.5-pro", "DeepSeek-Coder-V2", "deepseek-V2-chat"]:
+                            # Parse the JSON-like string
+                            chunk_str = chunk.decode('utf-8').replace('data: ', '')
+                            if chunk_str != "[DONE]":
+                                try:
+                                    chunk_data = json.loads(chunk_str)
+                                    if 'choices' in chunk_data and len(chunk_data['choices']) > 0:
+                                        delta = chunk_data['choices'][0]['delta']
+                                        if 'content' in delta:
+                                            response_text += delta['content']
+                                            yield response_text + typing_indicator
+                                except json.JSONDecodeError:
+                                    print(f"Failed to parse chunk: {chunk_str}")
+                        else:
+                            # Existing Omniplex API response handling
+                            chunk_str = chunk.decode("utf-8")
+                            response_text += chunk_str
+                            yield response_text + typing_indicator
+                
+                chat_history.append({"role": "assistant", "content": response_text})
+                return chat_history
+            except requests.exceptions.RequestException as e:
+                yield f"Error: {str(e)}"
 
 # File path for storing the conversation data
 DATA_FILE = "conversations.json"

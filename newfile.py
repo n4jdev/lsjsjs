@@ -761,16 +761,10 @@ def main_ui():
 
                 # Add Site input field
                 site = st.text_input("Site", placeholder="stackoverflow.com", key="site_input")
-
+                
                 available_models = list(MODEL_CONTEXT_LIMITS.keys())
-selected_model = st.selectbox("Choose Model", available_models, index=available_models.index("gpt-4o"), disabled=st.session_state.is_processing)
-st.session_state.selected_model = selected_model  # Store the selected model in session state
-
-# Remove tokenization for non-GPT models
-if selected_model not in ["gpt-4o", "gpt-4-turbo-2024-04-09", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]:
-    encoding = None
-else:
-    encoding = tiktoken.encoding_for_model(selected_model)
+                selected_model = st.selectbox("Choose Model", available_models, index=available_models.index("gpt-4o"), disabled=st.session_state.is_processing)
+                st.session_state.selected_model = selected_model
 
                 temperature = st.slider("Temperature", 0.0, 1.0, 1.0, step=0.1, disabled=st.session_state.is_processing)
                 max_tokens = st.slider("Max Tokens", 100, 4096, 4096, step=100, disabled=st.session_state.is_processing)
@@ -781,6 +775,7 @@ else:
                 encoding = tiktoken.encoding_for_model(selected_model)
 
             st.button("Logout", on_click=logout)
+
         if current_conversation:
             st.title(f"{current_conversation or 'No Chat Selected'}")
             display_chat(current_conversation)
